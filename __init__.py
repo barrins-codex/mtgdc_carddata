@@ -18,9 +18,7 @@ class MTGJSON:
         url = (
             mtgjson.allcards
             if wanted == "cards"
-            else mtgjson.allsets
-            if wanted == "sets"
-            else None
+            else mtgjson.allsets if wanted == "sets" else None
         )
 
         if not os.path.isfile(path) or mtgjson._file_older_than(path, 7):
@@ -52,7 +50,7 @@ class CardDatabase:
                     [
                         card_name
                         for _, card_name in self._clean_keys.items()
-                        if CardDatabase._is_commander(self.atomic_cards[card_name][0])
+                        if CardDatabase.is_commander(self.atomic_cards[card_name][0])
                     ]
                 )
             )
@@ -84,7 +82,7 @@ class CardDatabase:
         )
 
     @staticmethod
-    def _is_commander(card) -> bool:
+    def is_commander(card) -> bool:
         try:
             if card["name"].startswith("A-"):
                 return False
@@ -103,7 +101,7 @@ class CardDatabase:
 
             return True
         except:
-            print(card)
+            print("Error", card)
             return False
 
     def str_command_zone(
