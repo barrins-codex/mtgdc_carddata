@@ -50,7 +50,7 @@ class CardDatabase:
                     [
                         card_name
                         for _, card_name in self._clean_keys.items()
-                        if CardDatabase.is_commander(self.atomic_cards[card_name][0])
+                        if self.is_commander(self.atomic_cards[card_name][0])
                     ]
                 )
             )
@@ -58,6 +58,11 @@ class CardDatabase:
         self.sets = SetDatabase()
 
     def card(self, card_name: str) -> dict:
+        if card_name in self.atomic_cards.keys():
+            return self.atomic_cards[card_name][0]
+        return self._card(card_name)
+
+    def _card(self, card_name: str) -> dict:
         card_name = card_name.replace("&amp;", "")
         card_name = self._remove_accents(card_name)
 
@@ -81,28 +86,35 @@ class CardDatabase:
             "%Y-%m-%d",
         )
 
-    @staticmethod
-    def is_commander(card) -> bool:
-        try:
-            if card["name"].startswith("A-"):
-                return False
+    def has_been_commander(self, card) -> bool:
+        if type(card) == str:
+            card = self.card(card)
 
-            if "leadershipSkills" not in card.keys():
-                return False
-
-            if not card["leadershipSkills"]["commander"]:
-                return False
-
-            if (
-                "duel" in card["legalities"].keys()
-                and card["legalities"]["duel"] == "Restricted"
-            ):
-                return False
-
-            return True
-        except:
-            print("Error", card)
+        if card["name"].startswith("A-"):
             return False
+
+        if "leadershipSkills" not in card.keys():
+            return False
+
+        if not card["leadershipSkills"]["commander"]:
+            return False
+
+        return True
+
+    def is_commander(self, card) -> bool:
+        if type(card) == str:
+            card = self.card(card)
+
+        if not self.has_been_commander(card):
+            return False
+
+        if (
+            "duel" in card["legalities"].keys()
+            and card["legalities"]["duel"] == "Restricted"
+        ):
+            return False
+
+        return True
 
     def str_command_zone(
         self,
