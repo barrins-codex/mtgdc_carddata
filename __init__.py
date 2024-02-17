@@ -1,7 +1,7 @@
 import gzip
 import json
-import os
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import requests
 from unidecode import unidecode
@@ -13,7 +13,7 @@ class MTGJSON:
         self.allsets = "https://mtgjson.com/api/v5/SetList.json.gz"
 
     @staticmethod
-    def control(wanted: str, path: str):
+    def control(wanted: str, path: Path):
         mtgjson = MTGJSON()
         url = (
             mtgjson.allcards
@@ -21,16 +21,22 @@ class MTGJSON:
             else mtgjson.allsets if wanted == "sets" else None
         )
 
-        if not os.path.isfile(path) or mtgjson._file_older_than(path, 7):
+        if not path.is_file() or mtgjson._file_older_than(path, 7):
             mtgjson._download(url, path)
 
-    def _file_older_than(self, filepath: str, age: int):
-        file_timestamp = os.path.getmtime(filepath)
+    @staticmethod
+    def force_update(dir_path: Path):
+        mtgjson = MTGJSON()
+        mtgjson._download(mtgjson.allcards, dir_path / "AtomicCards.json.gz")
+        mtgjson._download(mtgjson.allsets, dir_path / "AllSets.json.gz")
+
+    def _file_older_than(self, filepath: Path, age: int):
+        file_timestamp = filepath.stat().st_mtime
         file_timestamp = datetime.fromtimestamp(file_timestamp)
         current_time = datetime.now()
         return (current_time - file_timestamp) > timedelta(days=age)
 
-    def _download(self, link: str, filepath: str):
+    def _download(self, link: str, filepath: Path):
         response = requests.get(link, stream=True)
         with open(filepath, "wb") as file:
             file.write(response.content)
@@ -38,7 +44,7 @@ class MTGJSON:
 
 class CardDatabase:
     def __init__(self) -> None:
-        self._filepath = "mtgdc_carddata/AtomicCards.json.gz"
+        self._filepath = Path("mtgdc_carddata/AtomicCards.json.gz")
         MTGJSON.control("cards", self._filepath)
         self.atomic_cards = json.load(gzip.open(self._filepath))["data"]
         self._clean_keys = {
@@ -142,7 +148,7 @@ class CardDatabase:
 
 class SetDatabase:
     def __init__(self) -> None:
-        self._filepath = "mtgdc_carddata/AllSets.json.gz"
+        self._filepath = Path("mtgdc_carddata/AllSets.json.gz")
         MTGJSON.control("sets", self._filepath)
         json_file = json.load(gzip.open(self._filepath))["data"]
 
